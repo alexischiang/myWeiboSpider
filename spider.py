@@ -65,12 +65,6 @@ class weibo:
         self.following.append(selector.xpath('/html/body/div[3]/div[2]/a[1]/text()')[0])
         self.follower.append(selector.xpath('/html/body/div[3]/div[2]/a[2]/text()')[0])
 
-        # 筛选 + 存储（法2）
-        # info_list = selector.xpath("//div[@class='tip2']/*/text()")
-        # self.total_weibo.append(info_list[0])
-        # self.following(info_list[1])
-        # self.follower(info_list[2])
-
     def get_total_page_num(self):
         """获取微博总页数"""
         # 读取html
@@ -78,6 +72,26 @@ class weibo:
         selector = self.get_html(url)
         # 筛选html
         self.total_page = selector.xpath("/html/body/div[@class='pa']/form/div/text()")[1][-4:-1]
+
+    def get_zan_index(self,likes_text):
+        """在列表中找到赞的索引"""
+        try:
+            for index in range(0,len(likes_text)):
+                if '赞[' in likes_text[index]:
+                    return likes_text[index]
+        except Exception as e:
+            print('Error:',e)
+            traceback.print_exc()
+
+    def get_zhuanfa_index(self,retweets_text):
+        """在列表中找到转发的索引"""
+        try:
+            for index in range(0,len(retweets_text)):
+                if '发[' in retweets_text[index]:
+                    return retweets_text[index]
+        except Exception as e:
+            print('Error:',e)
+            traceback.print_exc()
 
     def get_one_page(self,page_num):
         """爬取单页10条微博内容+点赞数+评论数+转发数"""
@@ -90,10 +104,18 @@ class weibo:
         url = base_url + urlencode(params)
         selector = self.get_html(url)
         # 筛选html
-        for index in range(2,11):
+        for index in range(1,11):
             self.blog_content.append(selector.xpath("/html/body/div[@class='c'][" + str(index) + "]/div[1]/span[1]//text()"))
-            self.blog_likes.append(selector.xpath("/html/body/div[@class='c'][" + str(index) + "]/div[last()]/a[last()-5]/text()")[0][2:-1])
-            self.blog_retweets.append(selector.xpath("/html/body/div[@class='c'][" + str(index) + "]/div[last()]/a[last()-4]/text()")[0][3:-1])
+            # 处理 "已赞"
+            likes_text =  selector.xpath("/html/body/div[@class='c'][" + str(index) + "]/div[last()]//text()")
+            likes = self.get_zan_index(likes_text)   
+            self.blog_likes.append(likes[likes.rfind('[')+1:-1])     
+
+            # 处理 好友圈无法转发问题 
+            retweets_text = selector.xpath("/html/body/div[@class='c'][" + str(index) + "]/div[last()]//text()")
+            retweets = self.get_zhuanfa_index(retweets_text)
+            self.blog_retweets.append(retweets[retweets.rfind('[')+1:-1])  
+
             self.blog_comments.append(selector.xpath("/html/body/div[@class='c'][" + str(index) + "]/div[last()]/a[last()-3]/text()")[0][3:-1])
 
 
@@ -104,28 +126,30 @@ class weibo:
         self.get_userinfo()
         self.get_userinfo2()
         self.get_total_page_num()
-        self.get_one_page(1)
+        for index in range(1,3):
+            self.get_one_page(index)
         
-
-        print(self.name)
-        print(self.sex)
-        print(self.area)
-        print(self.birthday)
-        print(self.intro)
-        print(self.total_weibo)
-        print(self.following)
-        print(self.follower)
-        print('*' *40)
+        print('*' *20 + ' 我的资料 ' + '*' *20)
+        print("昵称："+self.name[0])
+        print("性别："+self.sex[0])
+        print("地区："+self.area[0])
+        print("生日："+self.birthday[0])
+        print("简介："+self.intro[0])
+        print("微博数："+self.total_weibo[0][3:-1]+" 条")
+        print("关注："+self.following[0][3:-1]+" 人")
+        print("粉丝："+self.follower[0][3:-1]+" 人")
+        print('*' *20 + ' 我的微博 ' + '*' *20)
         # print(self.total_page)
         # print(self.blog_content)
         # print(self.blog_likes)
         # print(self.blog_retweets)
         # print(self.blog_comments)
-        for index in range(0,len(self.blog_content)-1):
+        for index in range(0,len(self.blog_content)):
             print("微博内容："+''.join(self.blog_content[index])) # 修正合并单条博文
             print("赞："+self.blog_likes[index][0])
             print("转发："+self.blog_retweets[index][0])
             print("评论："+self.blog_comments[index][0])
+            print('-'*8)
 
 
 
