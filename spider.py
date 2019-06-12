@@ -5,7 +5,7 @@ import traceback
 from lxml import etree
 
 class weibo:
-    def __init__(self, user_id, cookies):
+    def __init__(self, user_id, cookies, filter):
         """初始化"""
         self.user_id = user_id
         self.cookies = {
@@ -20,11 +20,13 @@ class weibo:
         self.following = []
         self.follower = []
         self.total_page:int
+        self.filter = filter #所有微博 = 0; 原创微博 =1
+        self.blog = []
 
-    def get_html(self,url):
+    def get_html(self,url,*params):
         """获取传入url的html文本"""
         try:
-            html = requests.get(url= url, cookies= self.cookies).content
+            html = requests.get(url= url, cookies= self.cookies, params= params).content
             selector = etree.HTML(html)
             return selector
         except Exception as e:
@@ -68,8 +70,20 @@ class weibo:
         selector = self.get_html(url)
         # 筛选html
         self.total_page = selector.xpath("/html/body/div[@class='pa']/form/div/text()")[1][-4:-1]
-        
-        
+
+    def get_one_page_ori(self):
+        """获取单页的原创微博"""
+        # 读取html
+        params = {
+            'filter' : '1',
+            'page' : '1'
+        }
+        url = 'https://weibo.cn/' + self.user_id + '/profile?'
+        selector = self.get_html(url)
+        # 筛选html
+
+
+           
 
 
     def show(self):
