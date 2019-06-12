@@ -1,5 +1,6 @@
 # myWeiboSpider
-##*(just for practicing)*
+##(just for practicing)
+
 <p align="left">
     <a href="">
         <img src="https://img.shields.io/badge/状态-持续更新中-brightgreen.svg">
@@ -11,7 +12,7 @@
         <img src="https://img.shields.io/github/stars/alexischiang/myWeiboSpider.svg?logo=github">
         </a>
 </p>
-通过xPATH库爬取微博数据
+通过xPATH库爬取微博数据(练习用)
 
 ## 开发日志:
 #### 2019/6/12 0:37 
