@@ -8,10 +8,12 @@ from lxml import etree
 class weibo:
     def __init__(self, user_id, cookies, filter):
         """初始化"""
+        # 请求信息
         self.user_id = user_id
         self.cookies = {
             'Cookie' : cookies
         }
+        # 个人信息
         self.name = []
         self.sex = []
         self.area = []
@@ -21,8 +23,13 @@ class weibo:
         self.following = []
         self.follower = []
         self.total_page:int
-        self.filter = filter #所有微博 = 0; 原创微博 =1
-        self.blog = []
+        # 所有微博 = 0; 原创微博 =1
+        self.filter = filter 
+        # 微博属性
+        self.blog_content = []
+        self.blog_likes = []
+        self.blog_retweets = []
+        self.blog_comments = []
 
     def get_html(self,url,*params):
         """获取传入url的html文本"""
@@ -73,6 +80,7 @@ class weibo:
         self.total_page = selector.xpath("/html/body/div[@class='pa']/form/div/text()")[1][-4:-1]
 
     def get_one_page(self,page_num):
+        """爬取单页10条微博内容+点赞数+评论数+转发数"""
         # 读取html
         params = {
             'filter' : self.filter,
@@ -83,7 +91,10 @@ class weibo:
         selector = self.get_html(url)
         # 筛选html
         for index in range(2,11):
-            self.blog.append(selector.xpath("/html/body/div[@class='c'][" + str(index) + "]/div[1]/span[1]//text()"))
+            self.blog_content.append(selector.xpath("/html/body/div[@class='c'][" + str(index) + "]/div[1]/span[1]//text()"))
+            self.blog_likes.append(selector.xpath("/html/body/div[@class='c'][" + str(index) + "]/div[last()]/a[last()-5]/text()")[0][2:-1])
+            self.blog_retweets.append(selector.xpath("/html/body/div[@class='c'][" + str(index) + "]/div[last()]/a[last()-4]/text()")[0][3:-1])
+            self.blog_comments.append(selector.xpath("/html/body/div[@class='c'][" + str(index) + "]/div[last()]/a[last()-3]/text()")[0][3:-1])
 
 
            
@@ -94,6 +105,7 @@ class weibo:
         self.get_userinfo2()
         self.get_total_page_num()
         self.get_one_page(1)
+        
 
         print(self.name)
         print(self.sex)
@@ -103,9 +115,18 @@ class weibo:
         print(self.total_weibo)
         print(self.following)
         print(self.follower)
-        print(self.total_page)
-        for index in range(0,9):
-            print(self.blog[index])
+        print('*' *40)
+        # print(self.total_page)
+        # print(self.blog_content)
+        # print(self.blog_likes)
+        # print(self.blog_retweets)
+        # print(self.blog_comments)
+        for index in range(0,len(self.blog_content)-1):
+            print("微博内容："+''.join(self.blog_content[index])) # 修正合并单条博文
+            print("赞："+self.blog_likes[index][0])
+            print("转发："+self.blog_retweets[index][0])
+            print("评论："+self.blog_comments[index][0])
+
 
 
 if __name__ == "__main__":

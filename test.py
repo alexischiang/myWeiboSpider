@@ -13,10 +13,11 @@ cookies = {
 html = requests.get('https://weibo.cn/2611891653/profile', headers= headers, cookies= cookies).content
 selector = etree.HTML(html)
 
-a = selector.xpath("//div[@class='tip2']/*/text()")
+index = 1
+a = selector.xpath("/html/body/div[@class='c'][" + str(index) + "]/div[last()]/a[last()-4]/text()")[0][3:-1]
 
 
-print(type(a))
-print(type(a[0]))
+# print(type(a))
+# print(type(a[0]))
 print(a)
 
