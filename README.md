@@ -6,6 +6,9 @@
     <a href="https://github.com/python/cpython">
         <img src="https://img.shields.io/badge/Python-3.7-blue.svg">
         </a>
+    <a href="https://github.com/alexischiang/myWeiboSpider/stargazers">
+        <img src="https://img.shields.io/github/stars/alexischiang/myWeiboSpider.svg?logo=github">
+        </a>
 </p>
 通过xPATH库爬取微博数据
 
