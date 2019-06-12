@@ -19,6 +19,7 @@ class weibo:
         self.total_weibo = []
         self.following = []
         self.follower = []
+        self.total_page:int
 
     def get_html(self,url):
         """获取传入url的html文本"""
@@ -60,10 +61,23 @@ class weibo:
         # self.following(info_list[1])
         # self.follower(info_list[2])
 
+    def get_total_page(self):
+        """获取微博总页数"""
+        # 读取html
+        url = 'https://weibo.cn/' + self.user_id + '/profile'
+        selector = self.get_html(url)
+        # 筛选html
+        self.total_page = selector.xpath("/html/body/div[@class='pa']/form/div/text()")[1][-4:-1]
+        
+        
+
 
     def show(self):
         self.get_userinfo()
         self.get_userinfo2()
+        self.get_total_page()
+
+
         print(self.name)
         print(self.sex)
         print(self.area)
@@ -72,6 +86,7 @@ class weibo:
         print(self.total_weibo)
         print(self.following)
         print(self.follower)
+        print(self.total_page)
 
 if __name__ == "__main__":
     cookies = 'SCF=AmMdYdAD8xDP84Xc7sEtL9WXFMVx_fALJyadgeh6G41PUqyXV4VQ_9g8MWqBiH82U_5rDZFKsxg0w-CrGae8IXg.; SUBP=0033WrSXqPxfM725Ws9jqgMF55529P9D9WFr0NVib_A0gaGkWL.D5ObN5JpX5K-hUgL.FozceK2R1K2cSKe2dJLoI0qLxKqLBKBLBo5LxK-LB-BL1K5LxKqLBo2L1h2LxKqL1hnL1K2LxKML1hnLBo2LxK-L1KqL1-Bt; _T_WM=52050499844; SL_GWPT_Show_Hide_tmp=1; SL_wptGlobTipTmp=1; MLOGIN=0; SUB=_2A25x-7enDeRhGeRI6lMZ-S_Kzj-IHXVTB9nvrDV6PUJbkdBeLVrMkW1NUtpT2XBkCAb9xERrHGGHTjLUkQZBtos0; SUHB=08J6kbAgs1djdm; SSOLoginState=1560266743'
