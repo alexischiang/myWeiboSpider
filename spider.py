@@ -123,7 +123,10 @@ class weibo:
         if lists == []:
             return None
         else:
-            return 'https://weibo.cn/'+ lists[0]
+            if '/comment/' in lists[0]:
+                return 'https://weibo.cn/'+ lists[0]
+            else:
+                return None
 
 
     def get_one_page(self,page_num):
@@ -148,7 +151,7 @@ class weibo:
                 # 是长微博时
                 long_url = self.check_long_weibo(lists)
                 long_selector = self.get_html(long_url)
-                long_weibo = long_selector.xpath("/html/body/div[4]/div[1]/span[1]//text()")
+                long_weibo = long_selector.xpath("/html/body/div[@id='M_']/div[1]/span[1]//text()")
                 long_weibo[0] = long_weibo[0][1:]
                 self.blog_content.append(''.join(long_weibo))
             
@@ -177,7 +180,8 @@ class weibo:
         self.get_userinfo()
         self.get_userinfo2()
         self.get_total_page_num()
-        self.get_one_page(1)
+        for index in range(1,11):
+            self.get_one_page(index)
 
         # for index in range(1,5):
         #     self.get_one_page(index)
