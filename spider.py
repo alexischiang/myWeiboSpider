@@ -30,6 +30,7 @@ class weibo:
         self.blog_likes = []
         self.blog_retweets = []
         self.blog_comments = []
+        self.pics_info = []
 
     def get_html(self,url,*params):
         """获取传入url的html文本"""
@@ -74,7 +75,7 @@ class weibo:
         self.total_page = selector.xpath("/html/body/div[@class='pa']/form/div/text()")[1][-4:-1]
 
     def get_zan_index(self,likes_text):
-        """在列表中找到赞的索引"""
+        """在列表中找到赞的索引并返回该索引的内容"""
         try:
             for index in range(0,len(likes_text)):
                 if '赞[' in likes_text[index]:
@@ -84,7 +85,7 @@ class weibo:
             traceback.print_exc()
 
     def get_zhuanfa_index(self,retweets_text):
-        """在列表中找到转发的索引"""
+        """在列表中找到转发的索引并返回该索引的内容"""
         try:
             for index in range(0,len(retweets_text)):
                 if '发[' in retweets_text[index]:
@@ -93,6 +94,30 @@ class weibo:
             print('Error:',e)
             traceback.print_exc()
 
+    def get_zutu_index(self,text_list): # text_list 来自 div[index]//text()
+        """在列表中找到组图的索引并返回该索引的内容"""
+        for index in range(0,len(text_list)):
+            if '\xa0[' in text_list[index]:
+                return text_list[index+1]
+
+    def check_with_pic(self,href_list):
+        """检索URL中是否含有带图片的URL"""
+        for index in range(0,len(href_list)):
+            if '/pic' in href_list[index]:
+                return True
+            else:
+                return False
+
+    def check_pics_num(self,text_list,href_list):
+        """检查该条微博是否含有图片并返回图片张数"""
+        if self.check_with_pic(href_list):
+            if self.get_zutu_index(text_list) != None:
+                return '['+self.get_zutu_index(text_list)+']'
+            else:
+                return '[共1张]'
+        else:
+            return None
+            
     def get_one_page(self,page_num):
         """爬取单页10条微博内容+点赞数+评论数+转发数"""
         # 读取html
@@ -117,6 +142,11 @@ class weibo:
             self.blog_retweets.append(retweets[retweets.rfind('[')+1:-1])  
 
             self.blog_comments.append(selector.xpath("/html/body/div[@class='c'][" + str(index) + "]/div[last()]/a[last()-3]/text()")[0][3:-1])
+            
+            # 处理 有无图片与张数
+            text_lists = selector.xpath("/html/body/div[@class='c'][" + str(index) + "]//text()")
+            href_lists = selector.xpath("/html/body/div[@class='c'][" + str(index) + "]/div[last()]//a/@href")
+            self.pics_info.append(self.check_pics_num(text_lists,href_lists))
 
 
            
@@ -146,6 +176,8 @@ class weibo:
         # print(self.blog_comments)
         for index in range(0,len(self.blog_content)):
             print("微博内容："+''.join(self.blog_content[index])) # 修正合并单条博文
+            if self.pics_info[index] != None:
+                print("图片："+self.pics_info[index])
             print("赞："+self.blog_likes[index][0])
             print("转发："+self.blog_retweets[index][0])
             print("评论："+self.blog_comments[index][0])
