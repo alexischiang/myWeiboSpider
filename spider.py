@@ -117,7 +117,15 @@ class weibo:
                 return '[共1张]'
         else:
             return None
-            
+
+    def check_long_weibo(self,lists):
+        """判断是否长微博 是则返回url 否则返回none"""
+        if lists == []:
+            return None
+        else:
+            return 'https://weibo.cn/'+ lists[0]
+
+
     def get_one_page(self,page_num):
         """爬取单页10条微博内容+点赞数+评论数+转发数"""
         # 读取html
@@ -130,7 +138,20 @@ class weibo:
         selector = self.get_html(url)
         # 筛选html
         for index in range(1,11):
-            self.blog_content.append(selector.xpath("/html/body/div[@class='c'][" + str(index) + "]/div[1]/span[1]//text()"))
+            # 处理 博文
+            lists = selector.xpath("/html/body/div[@class='c'][" + str(index) + "]//span[@class='ctt']/*/@href")
+            print(index,":",lists)
+            if self.check_long_weibo(lists) == None:
+                # 判断不是长微博时 
+                self.blog_content.append(selector.xpath("/html/body/div[@class='c'][" + str(index) + "]/div[1]/span[1]//text()"))
+            else:
+                # 是长微博时
+                long_url = self.check_long_weibo(lists)
+                long_selector = self.get_html(long_url)
+                long_weibo = long_selector.xpath("/html/body/div[4]/div[1]/span[1]//text()")
+                long_weibo[0] = long_weibo[0][1:]
+                self.blog_content.append(''.join(long_weibo))
+            
             # 处理 "已赞"
             likes_text =  selector.xpath("/html/body/div[@class='c'][" + str(index) + "]/div[last()]//text()")
             likes = self.get_zan_index(likes_text)   
@@ -156,8 +177,10 @@ class weibo:
         self.get_userinfo()
         self.get_userinfo2()
         self.get_total_page_num()
-        for index in range(1,3):
-            self.get_one_page(index)
+        self.get_one_page(1)
+
+        # for index in range(1,5):
+        #     self.get_one_page(index)
         
         print('*' *20 + ' 我的资料 ' + '*' *20)
         print("昵称："+self.name[0])
