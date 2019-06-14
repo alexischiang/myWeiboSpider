@@ -148,8 +148,10 @@ class weibo:
         base_url = 'https://weibo.cn/' + self.user_id + '/profile?'
         url = base_url + urlencode(params)
         selector = self.get_html(url)
+
+
         # 筛选html
-        for index in range(1,11):
+        for index in range(1,len(selector.xpath("/html/body/div[@class='c']"))-1):
             # 处理 博文
             lists = selector.xpath("/html/body/div[@class='c'][" + str(index) + "]//span[@class='ctt']/*/@href")
             if self.check_long_weibo(lists) == None:
@@ -168,9 +170,7 @@ class weibo:
             device_texts = ''.join(device_lists)
             time, device = self.cut_device_text(device_texts) 
             self.blog_time.append(time)
-            print(self.blog_time)
             self.blog_device.append(device)
-            print(self.blog_device)
 
             # 处理 "已赞"
             likes_text =  selector.xpath("/html/body/div[@class='c'][" + str(index) + "]/div[last()]//text()")
@@ -198,11 +198,10 @@ class weibo:
         self.get_userinfo()
         self.get_userinfo2()
         self.get_total_page_num()
-        for index in range(1,2):
-            self.get_one_page(index)
 
-        # for index in range(1,5):
-        #     self.get_one_page(index)
+        for index in range(1, 63):
+            self.get_one_page(index)
+            print(self.blog_content)
         
         print('*' *20 + ' 我的资料 ' + '*' *20)
         print("昵称："+self.name[0])
@@ -229,7 +228,7 @@ class weibo:
             print("发布时间："+self.blog_time[index])
             print("微博来源："+self.blog_device[index])
             print('-'*8)
-
+        print('*' *20 + ' 爬取结束 ' + '*' *20)
 
 
 if __name__ == "__main__":
