@@ -31,6 +31,8 @@ class weibo:
         self.blog_retweets = []
         self.blog_comments = []
         self.pics_info = []
+        self.blog_time = []
+        self.blog_device = []
 
     def get_html(self,url,*params):
         """获取传入url的html文本"""
@@ -118,6 +120,13 @@ class weibo:
         else:
             return None
 
+    def cut_device_text(self,device_texts):
+        """分割发布时间与发布设备分别返回字符串"""
+        index = device_texts.rfind('\xa0')
+            #先返回时间 后返回设备
+        return device_texts[:index],device_texts[(index+3):]
+
+
     def check_long_weibo(self,lists):
         """判断是否长微博 是则返回url 否则返回none"""
         if lists == []:
@@ -143,7 +152,6 @@ class weibo:
         for index in range(1,11):
             # 处理 博文
             lists = selector.xpath("/html/body/div[@class='c'][" + str(index) + "]//span[@class='ctt']/*/@href")
-            print(index,":",lists)
             if self.check_long_weibo(lists) == None:
                 # 判断不是长微博时 
                 self.blog_content.append(selector.xpath("/html/body/div[@class='c'][" + str(index) + "]/div[1]/span[1]//text()"))
@@ -154,7 +162,16 @@ class weibo:
                 long_weibo = long_selector.xpath("/html/body/div[@id='M_']/div[1]/span[1]//text()")
                 long_weibo[0] = long_weibo[0][1:]
                 self.blog_content.append(''.join(long_weibo))
-            
+
+            # 处理 发布时间、设备
+            device_lists = selector.xpath("/html/body/div[@class='c']["+str(index)+"]/div[last()]/span[@class='ct']//text()")
+            device_texts = ''.join(device_lists)
+            time, device = self.cut_device_text(device_texts) 
+            self.blog_time.append(time)
+            print(self.blog_time)
+            self.blog_device.append(device)
+            print(self.blog_device)
+
             # 处理 "已赞"
             likes_text =  selector.xpath("/html/body/div[@class='c'][" + str(index) + "]/div[last()]//text()")
             likes = self.get_zan_index(likes_text)   
@@ -164,7 +181,8 @@ class weibo:
             retweets_text = selector.xpath("/html/body/div[@class='c'][" + str(index) + "]/div[last()]//text()")
             retweets = self.get_zhuanfa_index(retweets_text)
             self.blog_retweets.append(retweets[retweets.rfind('[')+1:-1])  
-
+            
+            # 处理 评论
             self.blog_comments.append(selector.xpath("/html/body/div[@class='c'][" + str(index) + "]/div[last()]/a[last()-3]/text()")[0][3:-1])
             
             # 处理 有无图片与张数
@@ -180,7 +198,7 @@ class weibo:
         self.get_userinfo()
         self.get_userinfo2()
         self.get_total_page_num()
-        for index in range(1,11):
+        for index in range(1,2):
             self.get_one_page(index)
 
         # for index in range(1,5):
@@ -208,6 +226,8 @@ class weibo:
             print("赞："+self.blog_likes[index][0])
             print("转发："+self.blog_retweets[index][0])
             print("评论："+self.blog_comments[index][0])
+            print("发布时间："+self.blog_time[index])
+            print("微博来源："+self.blog_device[index])
             print('-'*8)
 
 
