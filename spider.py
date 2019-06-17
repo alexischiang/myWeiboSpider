@@ -131,7 +131,9 @@ class weibo:
         return device_texts[:index],device_texts[(index+3):]
 
     def check_long_weibo(self,lists):
-        """判断是否长微博 是则返回url 否则返回none"""
+        """判断是否长微博 是则返回url 否则返回none
+        lists:含有值或[]的href列表
+        """
         if lists == []:
             return None
         else:
@@ -139,6 +141,16 @@ class weibo:
                 return 'https://weibo.cn/'+ lists[0]
             else:
                 return None
+
+    def get_long_weibo_ori(self,lists,selector):
+        """获取filter1下的长微博内容
+        lists:含有值或[]的href列表
+        """
+        long_url = self.check_long_weibo(lists)
+        long_selector = self.get_html(long_url)
+        long_weibo = long_selector.xpath("/html/body/div[@id='M_']/div[1]/span[1]//text()")
+        long_weibo[0] = long_weibo[0][1:]
+        self.blog_content.append(''.join(long_weibo))
 
     def check_original(self,lists):
         """判断是原创还是转发微博
@@ -172,6 +184,52 @@ class weibo:
         re_content_text = ''.join(re_content_list)
         return re_info_text,re_content_text
 
+    def get_devices(self,index,selector):
+        """获取设备和发布时间"""
+        device_lists = selector.xpath("/html/body/div[@class='c']["+str(index)+"]/div[last()]/span[@class='ct']//text()")
+        device_texts = ''.join(device_lists)
+        time, device = self.cut_device_text(device_texts) 
+        self.blog_time.append(time)
+        self.blog_device.append(device)
+
+    def get_blog_while_ori(self,index,selector):
+        """整合获取原创微博所有信息的函数"""
+        # 设置原创标志为true
+        self.ori_in_all.append(True)
+        # 处理 博文
+        href_lists = selector.xpath("/html/body/div[@class='c'][" + str(index) + "]//span[@class='ctt']/*/@href")
+        if self.check_long_weibo(href_lists) == None:
+            # 判断不是长微博时 
+            self.blog_content.append(selector.xpath("/html/body/div[@class='c'][" + str(index) + "]/div[1]/span[1]//text()"))
+        else:
+            # 是长微博时
+            self.get_long_weibo_ori(href_lists,selector)
+        
+        # 处理 发布时间、设备
+        self.get_devices(index,selector)
+
+        # 处理 "已赞"
+        likes_text =  selector.xpath("/html/body/div[@class='c'][" + str(index) + "]/div[last()]//text()")
+        likes = self.get_zan_index(likes_text)   
+        #添加操作
+        self.blog_likes.append(likes[likes.rfind('[')+1:-1])     
+
+        # 处理 好友圈无法转发问题 
+        retweets_text = selector.xpath("/html/body/div[@class='c'][" + str(index) + "]/div[last()]//text()")
+        retweets = self.get_zhuanfa_index(retweets_text)
+        #添加操作
+        self.blog_retweets.append(retweets[retweets.rfind('[')+1:-1])  
+        
+        # 处理 评论
+        #添加操作
+        self.blog_comments.append(selector.xpath("/html/body/div[@class='c'][" + str(index) + "]/div[last()]/a[last()-3]/text()")[0][3:-1])
+        
+        # 处理 有无图片与张数
+        text_lists = selector.xpath("/html/body/div[@class='c'][" + str(index) + "]//text()")
+        href_lists = selector.xpath("/html/body/div[@class='c'][" + str(index) + "]/div[last()]//a/@href")
+        #添加操作
+        self.pics_info.append(self.check_pics_num(text_lists,href_lists))
+
     def get_one_page(self,page_num):
         """爬取单页10条微博内容+点赞数+评论数+转发数"""
         # 读取html
@@ -187,48 +245,8 @@ class weibo:
         if self.filter == 1: # 获取原创
             # 获取当前页面微博数量
             for index in range(1,len(selector.xpath("/html/body/div[@class='c']"))-1):
-                # 设置原创标志为true
-                self.ori_in_all.append(True)
-                # 处理 博文
-                lists = selector.xpath("/html/body/div[@class='c'][" + str(index) + "]//span[@class='ctt']/*/@href")
-                if self.check_long_weibo(lists) == None:
-                    # 判断不是长微博时 
-                    self.blog_content.append(selector.xpath("/html/body/div[@class='c'][" + str(index) + "]/div[1]/span[1]//text()"))
-                else:
-                    # 是长微博时
-                    long_url = self.check_long_weibo(lists)
-                    long_selector = self.get_html(long_url)
-                    long_weibo = long_selector.xpath("/html/body/div[@id='M_']/div[1]/span[1]//text()")
-                    long_weibo[0] = long_weibo[0][1:]
-                    self.blog_content.append(''.join(long_weibo))
-
-                # 处理 发布时间、设备
-                device_lists = selector.xpath("/html/body/div[@class='c']["+str(index)+"]/div[last()]/span[@class='ct']//text()")
-                device_texts = ''.join(device_lists)
-                time, device = self.cut_device_text(device_texts) 
-                self.blog_time.append(time)
-                self.blog_device.append(device)
-
-                # 处理 "已赞"
-                likes_text =  selector.xpath("/html/body/div[@class='c'][" + str(index) + "]/div[last()]//text()")
-                likes = self.get_zan_index(likes_text)   
-                self.blog_likes.append(likes[likes.rfind('[')+1:-1])     
-
-                # 处理 好友圈无法转发问题 
-                retweets_text = selector.xpath("/html/body/div[@class='c'][" + str(index) + "]/div[last()]//text()")
-                retweets = self.get_zhuanfa_index(retweets_text)
-                self.blog_retweets.append(retweets[retweets.rfind('[')+1:-1])  
-                
-                # 处理 评论
-                self.blog_comments.append(selector.xpath("/html/body/div[@class='c'][" + str(index) + "]/div[last()]/a[last()-3]/text()")[0][3:-1])
-                
-                # 处理 有无图片与张数
-                text_lists = selector.xpath("/html/body/div[@class='c'][" + str(index) + "]//text()")
-                href_lists = selector.xpath("/html/body/div[@class='c'][" + str(index) + "]/div[last()]//a/@href")
-                self.pics_info.append(self.check_pics_num(text_lists,href_lists))
-            
-                
-                
+                self.get_blog_while_ori(index,selector)
+                     
         elif self.filter == 0: # 获取所有微博
             # 获取当前页面微博数量
             for index in range(1,len(selector.xpath("/html/body/div[@class='c']"))-1):
@@ -238,46 +256,7 @@ class weibo:
                 span_text = selector.xpath("/html/body/div[@class='c'][" + str(index) + "]/div[last()]/span[@class='cmt']/text()")
 
                 if self.check_original(span_text): #原创
-                    # 设置原创标志为true
-                    self.ori_in_all.append(True)
-                    # 处理 博文
-                    lists = selector.xpath("/html/body/div[@class='c'][" + str(index) + "]//span[@class='ctt']/*/@href")
-                    if self.check_long_weibo(lists) == None:
-                        # 判断不是长微博时 
-                        self.blog_content.append(selector.xpath("/html/body/div[@class='c'][" + str(index) + "]/div[1]/span[1]//text()"))
-                    else:
-                        # 是长微博时
-                        long_url = self.check_long_weibo(lists)
-                        long_selector = self.get_html(long_url)
-                        long_weibo = long_selector.xpath("/html/body/div[@id='M_']/div[1]/span[1]//text()")
-                        long_weibo[0] = long_weibo[0][1:]
-                        self.blog_content.append(''.join(long_weibo))
-
-                    # 处理 发布时间、设备
-                    device_lists = selector.xpath("/html/body/div[@class='c']["+str(index)+"]/div[last()]/span[@class='ct']//text()")
-                    device_texts = ''.join(device_lists)
-                    time, device = self.cut_device_text(device_texts) 
-                    self.blog_time.append(time)
-                    self.blog_device.append(device)
-
-                    # 处理 "已赞"
-                    likes_text =  selector.xpath("/html/body/div[@class='c'][" + str(index) + "]/div[last()]//text()")
-                    likes = self.get_zan_index(likes_text)   
-                    self.blog_likes.append(likes[likes.rfind('[')+1:-1])     
-
-                    # 处理 好友圈无法转发问题 
-                    retweets_text = selector.xpath("/html/body/div[@class='c'][" + str(index) + "]/div[last()]//text()")
-                    retweets = self.get_zhuanfa_index(retweets_text)
-                    self.blog_retweets.append(retweets[retweets.rfind('[')+1:-1])  
-                    
-                    # 处理 评论
-                    self.blog_comments.append(selector.xpath("/html/body/div[@class='c'][" + str(index) + "]/div[last()]/a[last()-3]/text()")[0][3:-1])
-                    
-                    # 处理 有无图片与张数
-                    text_lists = selector.xpath("/html/body/div[@class='c'][" + str(index) + "]//text()")
-                    href_lists = selector.xpath("/html/body/div[@class='c'][" + str(index) + "]/div[last()]//a/@href")
-                    self.pics_info.append(self.check_pics_num(text_lists,href_lists))
-
+                    self.get_blog_while_ori(index,selector)
                     self.retweet_info.append('【原创微博】')
                 
                 else: #转发
@@ -291,6 +270,7 @@ class weibo:
                         self.blog_content.append(re_content_text)
                         self.retweet_info.append('【'+ re_info_text+ '】')
                     else:
+                        # 该条件从未进入！ - 2019/6/17
                         print('confirm long!')
                         # 是长微博时
                         # self.blog_content.append('该条可能是转发长微博【bug未修复】')
@@ -301,11 +281,7 @@ class weibo:
                         self.blog_content.append(''.join(long_weibo))
 
                     # 处理 发布时间、设备
-                    device_lists = selector.xpath("/html/body/div[@class='c']["+str(index)+"]/div[last()]/span[@class='ct']//text()")
-                    device_texts = ''.join(device_lists)
-                    time, device = self.cut_device_text(device_texts) 
-                    self.blog_time.append(time)
-                    self.blog_device.append(device)
+                    self.get_devices(index,selector)
 
                     # 处理 "已赞"
                     likes_text =  selector.xpath("/html/body/div[@class='c'][" + str(index) + "]/div[last()]//text()")
@@ -325,19 +301,7 @@ class weibo:
                     href_lists = selector.xpath("/html/body/div[@class='c'][" + str(index) + "]/div[last()]//a/@href")
                     self.pics_info.append(self.check_pics_num(text_lists,href_lists))
 
-
-           
-
-
-    def show(self):
-        self.get_userinfo()
-        self.get_userinfo2()
-        self.get_total_page_num()
-
-        for index in range(1, 2):
-            self.get_one_page(index)
-            # print(self.blog_content)
-        
+    def formal_output(self):
         print('*' *20 + ' 我的资料 ' + '*' *20)
         print("昵称："+self.name[0])
         print("性别："+self.sex[0])
@@ -369,6 +333,20 @@ class weibo:
             print("微博来源："+self.blog_device[index])
             print('-'*8)
         print('*' *20 + ' 爬取结束 ' + '*' *20)
+
+    def show(self):
+        # 获得个人信息
+        self.get_userinfo()
+        self.get_userinfo2()
+        self.get_total_page_num()
+
+        # 获得博文
+        for index in range(1, 2):
+            self.get_one_page(index)
+            # print(self.blog_content)
+
+        # 格式化输出
+        self.formal_output
 
 
 if __name__ == "__main__":
