@@ -12,7 +12,7 @@ from lxml import etree
 # \xa0 是不间断空白符 &nbsp;
 
 class weibo:
-    def __init__(self, user_id, cookies, filter):
+    def __init__(self, user_id, cookies, filter, print_ori):
         """初始化"""
         # 请求信息
         self.user_id = user_id
@@ -31,16 +31,20 @@ class weibo:
         self.total_page:int
         # 所有微博 = 0; 原创微博 =1
         self.filter = filter 
+        # 显示转发微博原内容 = 1; 不显示 = 0
+        self.print_ori = print_ori
         # 微博属性
         self.blog_content = []
         self.blog_likes = []
         self.blog_retweets = []
         self.blog_comments = []
         self.pics_info = []
+        self.pics_info_re = []
         self.blog_time = []
         self.blog_device = []
         self.retweet_info = []
         self.ori_in_all = []
+        self.original_blog_content = []
 
     def get_html(self,url,*params):
         """获取传入url的html文本"""
@@ -118,13 +122,23 @@ class weibo:
             else:
                 return False
 
-    def check_pics_num(self,text_list,href_list):
+    def check_pics_num(self,selector,index):
         """检查该条微博是否含有图片并返回图片张数"""
-        if self.check_with_pic(href_list):
-            if self.get_zutu_index(text_list) != None:
-                return '['+self.get_zutu_index(text_list)+']'
+        text_lists = selector.xpath("/html/body/div[@class='c'][" + str(index) + "]//text()")
+        href_lists = selector.xpath("/html/body/div[@class='c'][" + str(index) + "]/div[last()]//a/@href")
+        if self.check_with_pic(href_lists):
+            if self.get_zutu_index(text_lists) != None:
+                return '['+self.get_zutu_index(text_lists)+']'
             else:
                 return '[共1张]'
+        else:
+            return None
+
+    def check_pics_re(self,selector,index):
+        """检查转发原内容里是否含有图片"""
+        href_lists = selector.xpath("/html/body/div[@class='c'][" + str(index) + "]/div[2]//a/@href")
+        if self.check_with_pic(href_lists):
+            return '[包含图片]'
         else:
             return None
 
@@ -189,6 +203,19 @@ class weibo:
         re_content_text = ''.join(re_content_list)
         return re_info_text,re_content_text
 
+    def get_retweetblog_content(self,selector,index):
+        """获得原微博的内容 返回字符串"""
+        final_lists = []
+        temp_lists_cmt = selector.xpath("/html/body/div[@class='c'][" + str(index) + "]/div[1]/span[@class='cmt']//text()")
+        temp_lists_ctt = selector.xpath("/html/body/div[@class='c'][" + str(index) + "]/div[1]/span[@class='ctt']//text()")
+        temp_lists = temp_lists_cmt+temp_lists_ctt
+        # print(temp_lists)
+        # for index in range(len(temp_lists)):
+        #     if '赞[' in temp_lists[index]:
+        #         final_lists =''.join(temp_lists[:index])
+        final_lists = ''.join(temp_lists_ctt)
+        return final_lists
+
     def get_devices(self,index,selector):
         """获取设备和发布时间"""
         device_lists = selector.xpath("/html/body/div[@class='c']["+str(index)+"]/div[last()]/span[@class='ct']//text()")
@@ -230,10 +257,8 @@ class weibo:
         self.blog_comments.append(selector.xpath("/html/body/div[@class='c'][" + str(index) + "]/div[last()]/a[last()-3]/text()")[0][3:-1])
         
         # 处理 有无图片与张数
-        text_lists = selector.xpath("/html/body/div[@class='c'][" + str(index) + "]//text()")
-        href_lists = selector.xpath("/html/body/div[@class='c'][" + str(index) + "]/div[last()]//a/@href")
-        #添加操作
-        self.pics_info.append(self.check_pics_num(text_lists,href_lists))
+        self.pics_info.append(self.check_pics_num(selector,index))
+        self.pics_info_re.append(None)
 
     def get_one_page(self,page_num):
         """爬取单页10条微博内容+点赞数+评论数+转发数"""
@@ -265,7 +290,7 @@ class weibo:
                 if self.check_original(span_text,freindcircle): #原创
                     self.get_blog_while_ori(index,selector)
                     self.retweet_info.append('【原创微博】')
-                
+                    self.original_blog_content.append('')
                 else: #转发
                     # 设置原创标志为false
                     self.ori_in_all.append(False)
@@ -276,8 +301,8 @@ class weibo:
                         re_info_text, re_content_text = self.get_content_re(selector,index)
                         self.blog_content.append(re_content_text)
                         self.retweet_info.append('【'+ re_info_text+ '】')
+                    
                     else:
-                        # 该条件从未进入！ - 2019/6/17
                         print('confirm long!')
                         # 是长微博时
                         # self.blog_content.append('该条可能是转发长微博【bug未修复】')
@@ -286,7 +311,8 @@ class weibo:
                         # long_weibo = long_selector.xpath("/html/body/div[@id='M_']/div[1]/span[1]//text()")
                         # long_weibo[0] = long_weibo[0][1:]
                         # self.blog_content.append(''.join(long_weibo))
-
+                    
+                    self.original_blog_content.append(self.get_retweetblog_content(selector,index))
                     # 处理 发布时间、设备
                     self.get_devices(index,selector)
 
@@ -304,9 +330,8 @@ class weibo:
                     self.blog_comments.append(selector.xpath("/html/body/div[@class='c'][" + str(index) + "]/div[last()]/a[last()-3]/text()")[0][3:-1])
                     
                     # 处理 有无图片与张数
-                    text_lists = selector.xpath("/html/body/div[@class='c'][" + str(index) + "]//text()")
-                    href_lists = selector.xpath("/html/body/div[@class='c'][" + str(index) + "]/div[last()]//a/@href")
-                    self.pics_info.append(self.check_pics_num(text_lists,href_lists))
+                    self.pics_info.append(self.check_pics_num(selector,index))
+                    self.pics_info_re.append(self.check_pics_re(selector,index))
 
 
     def enable_progressbar(self,page):
@@ -342,9 +367,15 @@ class weibo:
         for index in range(0,len(self.blog_content)):
             if self.ori_in_all[index] == False:
                 print(self.retweet_info[index])
+                if self.print_ori == 1:
+                    if self.pics_info_re[index] != None:
+                        print('【'+self.original_blog_content[index] + self.pics_info_re[index]+'】')
+                    else:
+                        print('【'+self.original_blog_content[index]+'】')
+                print('')
                 print(''.join(self.blog_content[index])) 
             else:
-                print('【原创微博】')
+                print('【原创微博】\n')
                 print("微博内容："+''.join(self.blog_content[index]))# 修正合并单条博文
             if self.pics_info[index] != None:
                 print("图片："+self.pics_info[index])
@@ -354,6 +385,7 @@ class weibo:
             print("发布时间："+self.blog_time[index])
             print("微博来源："+self.blog_device[index])
             print('-'*8)
+            print('')
         print('*' *20 + ' 爬取结束 ' + '*' *20)
 
     def main(self):
@@ -361,12 +393,12 @@ class weibo:
         self.get_userinfo()
         self.get_userinfo2()
         self.get_total_page_num()
-        self.enable_progressbar(10)
+        self.enable_progressbar(1)
 
 
 if __name__ == "__main__":
     cookies = 'SCF=AmMdYdAD8xDP84Xc7sEtL9WXFMVx_fALJyadgeh6G41PUqyXV4VQ_9g8MWqBiH82U_5rDZFKsxg0w-CrGae8IXg.; SUBP=0033WrSXqPxfM725Ws9jqgMF55529P9D9WFr0NVib_A0gaGkWL.D5ObN5JpX5K-hUgL.FozceK2R1K2cSKe2dJLoI0qLxKqLBKBLBo5LxK-LB-BL1K5LxKqLBo2L1h2LxKqL1hnL1K2LxKML1hnLBo2LxK-L1KqL1-Bt; _T_WM=52050499844; SL_GWPT_Show_Hide_tmp=1; SL_wptGlobTipTmp=1; MLOGIN=0; SUB=_2A25x-7enDeRhGeRI6lMZ-S_Kzj-IHXVTB9nvrDV6PUJbkdBeLVrMkW1NUtpT2XBkCAb9xERrHGGHTjLUkQZBtos0; SUHB=08J6kbAgs1djdm; SSOLoginState=1560266743'
-    weibo = weibo('2611891653',cookies,0)
+    weibo = weibo('2611891653',cookies,0,1)
     weibo.main()
 
 
