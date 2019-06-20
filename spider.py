@@ -1,3 +1,7 @@
+#coding=utf-8
+import progressbar
+import time
+
 import requests 
 from urllib.parse import urlencode
 
@@ -274,11 +278,11 @@ class weibo:
                         print('confirm long!')
                         # 是长微博时
                         # self.blog_content.append('该条可能是转发长微博【bug未修复】')
-                        long_url = self.check_long_weibo(lists)
-                        long_selector = self.get_html(long_url)
-                        long_weibo = long_selector.xpath("/html/body/div[@id='M_']/div[1]/span[1]//text()")
-                        long_weibo[0] = long_weibo[0][1:]
-                        self.blog_content.append(''.join(long_weibo))
+                        # long_url = self.check_long_weibo(lists)
+                        # long_selector = self.get_html(long_url)
+                        # long_weibo = long_selector.xpath("/html/body/div[@id='M_']/div[1]/span[1]//text()")
+                        # long_weibo[0] = long_weibo[0][1:]
+                        # self.blog_content.append(''.join(long_weibo))
 
                     # 处理 发布时间、设备
                     self.get_devices(index,selector)
@@ -341,17 +345,27 @@ class weibo:
         self.get_total_page_num()
 
         # 获得博文
-        for index in range(1, 2):
-            self.get_one_page(index)
+        # for index in range(1, 2):
+        #     self.get_one_page(index)
+
+        for i in progressbar.progressbar(range(10)):
+            self.get_one_page(i)
+            time.sleep(0.2)
+            progressbar.streams.flush()
             # print(self.blog_content)
 
-        # 格式化输出
-        self.formal_output
+        flag = input("print out the result? [y/n]：")
+
+        if flag.lower() == 'y':
+            # 格式化输出
+            self.formal_output()
+        else:
+            print("end!")
 
 
 if __name__ == "__main__":
     cookies = 'SCF=AmMdYdAD8xDP84Xc7sEtL9WXFMVx_fALJyadgeh6G41PUqyXV4VQ_9g8MWqBiH82U_5rDZFKsxg0w-CrGae8IXg.; SUBP=0033WrSXqPxfM725Ws9jqgMF55529P9D9WFr0NVib_A0gaGkWL.D5ObN5JpX5K-hUgL.FozceK2R1K2cSKe2dJLoI0qLxKqLBKBLBo5LxK-LB-BL1K5LxKqLBo2L1h2LxKqL1hnL1K2LxKML1hnLBo2LxK-L1KqL1-Bt; _T_WM=52050499844; SL_GWPT_Show_Hide_tmp=1; SL_wptGlobTipTmp=1; MLOGIN=0; SUB=_2A25x-7enDeRhGeRI6lMZ-S_Kzj-IHXVTB9nvrDV6PUJbkdBeLVrMkW1NUtpT2XBkCAb9xERrHGGHTjLUkQZBtos0; SUHB=08J6kbAgs1djdm; SSOLoginState=1560266743'
-    weibo = weibo('2611891653',cookies,0)
+    weibo = weibo('2611891653',cookies,1)
     weibo.show()
 
 
