@@ -15,14 +15,12 @@ selector = etree.HTML(html)
 
 re_content_list = []
 # for index in range(1,10):
-
-temp_lists = selector.xpath("/html/body/div[@class='c'][" + str(index) + "]/div[last()]//text()")
+index = 6
+temp_lists = selector.xpath("/html/body/div[@class='c'][" + str(index) + "]/div[1]//text()")
 print(temp_lists)
-for index in range(0,len(temp_lists)):
+print(len(temp_lists))
+for index in range(len(temp_lists)):
     if '赞[' in temp_lists[index]:
-        re_content_list = temp_lists[:index]
-
-print(re_content_list)
-
-re_content_text = ''.join(re_content_list)
-print(re_content_text)
+        final_lists =  temp_lists[:index]
+    
+print(''.join(final_lists))
