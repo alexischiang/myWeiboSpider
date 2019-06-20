@@ -156,12 +156,13 @@ class weibo:
         long_weibo[0] = long_weibo[0][1:]
         self.blog_content.append(''.join(long_weibo))
 
-    def check_original(self,lists):
+    def check_original(self,lists,freindcircle):
         """判断是原创还是转发微博
-        lists: 传入span的text
+        lists: 传入div[last]/span[cmt]的text
+        friendcircle: 传入div[1]/span[cmt]的text
         return: true - 原创 false - zhuanfa
         """
-        if lists == []:
+        if lists == [] or freindcircle[0] == '[仅好友圈可见]' :
             return True
         elif '转发理由:' in lists[0]:
             return False
@@ -258,8 +259,10 @@ class weibo:
                 # print('---')
                 # 判断是否原创
                 span_text = selector.xpath("/html/body/div[@class='c'][" + str(index) + "]/div[last()]/span[@class='cmt']/text()")
-
-                if self.check_original(span_text): #原创
+                freindcircle = selector.xpath("/html/body/div[@class='c'][" + str(index) + "]/div[1]/span[@class='cmt']/text()")
+                # print(span_text)
+                # print(freindcircle)
+                if self.check_original(span_text,freindcircle): #原创
                     self.get_blog_while_ori(index,selector)
                     self.retweet_info.append('【原创微博】')
                 
@@ -305,6 +308,21 @@ class weibo:
                     href_lists = selector.xpath("/html/body/div[@class='c'][" + str(index) + "]/div[last()]//a/@href")
                     self.pics_info.append(self.check_pics_num(text_lists,href_lists))
 
+
+    def enable_progressbar(self,page):
+        for i in progressbar.progressbar(range(int(page))):
+            self.get_one_page(i)
+            time.sleep(0.2)
+            progressbar.streams.flush()
+
+        flag = input("print out the result? [y/n]：")
+
+        if flag.lower() == 'y':
+            # 格式化输出
+            self.formal_output()
+        else:
+            print("end!")
+
     def formal_output(self):
         print('*' *20 + ' 我的资料 ' + '*' *20)
         print("昵称："+self.name[0])
@@ -338,34 +356,17 @@ class weibo:
             print('-'*8)
         print('*' *20 + ' 爬取结束 ' + '*' *20)
 
-    def show(self):
+    def main(self):
         # 获得个人信息
         self.get_userinfo()
         self.get_userinfo2()
         self.get_total_page_num()
-
-        # 获得博文
-        # for index in range(1, 2):
-        #     self.get_one_page(index)
-
-        for i in progressbar.progressbar(range(10)):
-            self.get_one_page(i)
-            time.sleep(0.2)
-            progressbar.streams.flush()
-            # print(self.blog_content)
-
-        flag = input("print out the result? [y/n]：")
-
-        if flag.lower() == 'y':
-            # 格式化输出
-            self.formal_output()
-        else:
-            print("end!")
+        self.enable_progressbar(10)
 
 
 if __name__ == "__main__":
     cookies = 'SCF=AmMdYdAD8xDP84Xc7sEtL9WXFMVx_fALJyadgeh6G41PUqyXV4VQ_9g8MWqBiH82U_5rDZFKsxg0w-CrGae8IXg.; SUBP=0033WrSXqPxfM725Ws9jqgMF55529P9D9WFr0NVib_A0gaGkWL.D5ObN5JpX5K-hUgL.FozceK2R1K2cSKe2dJLoI0qLxKqLBKBLBo5LxK-LB-BL1K5LxKqLBo2L1h2LxKqL1hnL1K2LxKML1hnLBo2LxK-L1KqL1-Bt; _T_WM=52050499844; SL_GWPT_Show_Hide_tmp=1; SL_wptGlobTipTmp=1; MLOGIN=0; SUB=_2A25x-7enDeRhGeRI6lMZ-S_Kzj-IHXVTB9nvrDV6PUJbkdBeLVrMkW1NUtpT2XBkCAb9xERrHGGHTjLUkQZBtos0; SUHB=08J6kbAgs1djdm; SSOLoginState=1560266743'
-    weibo = weibo('2611891653',cookies,1)
-    weibo.show()
+    weibo = weibo('2611891653',cookies,0)
+    weibo.main()
 
 
