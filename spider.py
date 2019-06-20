@@ -148,10 +148,11 @@ class weibo:
             #先返回时间 后返回设备
         return device_texts[:index],device_texts[(index+3):]
 
-    def check_long_weibo(self,lists):
+    def check_long_weibo(self,selector,index):
         """判断是否长微博 是则返回url 否则返回none
         lists:含有值或[]的href列表
         """
+        lists = selector.xpath("/html/body/div[@class='c'][" + str(index) + "]//span[@class='ctt']/*/@href")
         if lists == []:
             return None
         else:
@@ -160,15 +161,14 @@ class weibo:
             else:
                 return None
 
-    def get_long_weibo_ori(self,lists,selector):
+    def get_long_weibo(self,url):
         """获取filter1下的长微博内容
         lists:含有值或[]的href列表
         """
-        long_url = self.check_long_weibo(lists)
-        long_selector = self.get_html(long_url)
+        long_selector = self.get_html(url)
         long_weibo = long_selector.xpath("/html/body/div[@id='M_']/div[1]/span[1]//text()")
         long_weibo[0] = long_weibo[0][1:]
-        self.blog_content.append(''.join(long_weibo))
+        return ''.join(long_weibo)
 
     def check_original(self,lists,freindcircle):
         """判断是原创还是转发微博
@@ -184,7 +184,7 @@ class weibo:
     def get_content_re(self,selector,index):
         """
         获得需要加入content的text
-        return：转发了xxx微博，微博内容
+        return：转发了xxx微博，转发理由
         """
         global re_content_list
         # 整理转发信息
@@ -205,16 +205,17 @@ class weibo:
 
     def get_retweetblog_content(self,selector,index):
         """获得原微博的内容 返回字符串"""
-        final_lists = []
-        temp_lists_cmt = selector.xpath("/html/body/div[@class='c'][" + str(index) + "]/div[1]/span[@class='cmt']//text()")
-        temp_lists_ctt = selector.xpath("/html/body/div[@class='c'][" + str(index) + "]/div[1]/span[@class='ctt']//text()")
-        temp_lists = temp_lists_cmt+temp_lists_ctt
-        # print(temp_lists)
-        # for index in range(len(temp_lists)):
-        #     if '赞[' in temp_lists[index]:
-        #         final_lists =''.join(temp_lists[:index])
-        final_lists = ''.join(temp_lists_ctt)
-        return final_lists
+        if self.check_long_weibo(selector,index) == None:
+            # 不是长微博时 
+            final_lists = []
+            # temp_lists_cmt = selector.xpath("/html/body/div[@class='c'][" + str(index) + "]/div[1]/span[@class='cmt']//text()")
+            temp_lists_ctt = selector.xpath("/html/body/div[@class='c'][" + str(index) + "]/div[1]/span[@class='ctt']//text()")
+            final_lists = ''.join(temp_lists_ctt)
+            return final_lists
+        else:
+            # 是长微博时
+            return self.get_long_weibo(self.check_long_weibo(selector,index))
+
 
     def get_devices(self,index,selector):
         """获取设备和发布时间"""
@@ -229,13 +230,12 @@ class weibo:
         # 设置原创标志为true
         self.ori_in_all.append(True)
         # 处理 博文
-        href_lists = selector.xpath("/html/body/div[@class='c'][" + str(index) + "]//span[@class='ctt']/*/@href")
-        if self.check_long_weibo(href_lists) == None:
+        if self.check_long_weibo(selector,index) == None:
             # 判断不是长微博时 
             self.blog_content.append(selector.xpath("/html/body/div[@class='c'][" + str(index) + "]/div[1]/span[1]//text()"))
         else:
             # 是长微博时
-            self.get_long_weibo_ori(href_lists,selector)
+            self.blog_content.append(self.get_long_weibo(self.check_long_weibo(selector,index)))
         
         # 处理 发布时间、设备
         self.get_devices(index,selector)
@@ -294,25 +294,16 @@ class weibo:
                 else: #转发
                     # 设置原创标志为false
                     self.ori_in_all.append(False)
-                    # 处理 博文                   
-                    # 判断长微博
-                    if self.check_long_weibo(selector.xpath("/html/body/div[@class='c'][" + str(index) + "]//span[@class='ctt']/*/@href")) == None:
-                        # 不是长微博时 
-                        re_info_text, re_content_text = self.get_content_re(selector,index)
-                        self.blog_content.append(re_content_text)
-                        self.retweet_info.append('【'+ re_info_text+ '】')
                     
-                    else:
-                        print('confirm long!')
-                        # 是长微博时
-                        # self.blog_content.append('该条可能是转发长微博【bug未修复】')
-                        # long_url = self.check_long_weibo(lists)
-                        # long_selector = self.get_html(long_url)
-                        # long_weibo = long_selector.xpath("/html/body/div[@id='M_']/div[1]/span[1]//text()")
-                        # long_weibo[0] = long_weibo[0][1:]
-                        # self.blog_content.append(''.join(long_weibo))
-                    
+                    # 处理 转发信息+理由
+                    # （转发理由不能超过140字，不必判断是否为长微博）
+                    re_info_text, re_content_text = self.get_content_re(selector,index)
+                    self.blog_content.append(re_content_text)
+                    self.retweet_info.append('【'+ re_info_text+ '】')
+
+                    # 处理 原内容
                     self.original_blog_content.append(self.get_retweetblog_content(selector,index))
+                    
                     # 处理 发布时间、设备
                     self.get_devices(index,selector)
 
