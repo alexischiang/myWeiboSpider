@@ -9,6 +9,7 @@ from urllib.parse import urlencode
 import traceback
 from lxml import etree
 
+import csv
 # \xa0 是不间断空白符 &nbsp;
 
 class weibo:
@@ -35,6 +36,7 @@ class weibo:
         self.print_ori = print_ori
         # 微博属性
         self.blog_content = []
+        self.blog_content_total = []
         self.blog_likes = []
         self.blog_retweets = []
         self.blog_comments = []
@@ -177,6 +179,8 @@ class weibo:
         return: true - 原创 false - zhuanfa
         """
         if lists == [] or freindcircle[0] == '[仅好友圈可见]' :
+            return True
+        elif '已赞[' in lists[0]:
             return True
         elif '转发理由:' in lists[0]:
             return False
@@ -324,6 +328,8 @@ class weibo:
                     self.pics_info.append(self.check_pics_num(selector,index))
                     self.pics_info_re.append(self.check_pics_re(selector,index))
 
+                # print(self.blog_content)
+
 
     def enable_progressbar(self,page):
         for i in progressbar.progressbar(range(int(page))):
@@ -350,11 +356,6 @@ class weibo:
         print("关注："+self.following[0][3:-1]+" 人")
         print("粉丝："+self.follower[0][3:-1]+" 人")
         print('*' *20 + ' 我的微博 ' + '*' *20)
-        # print(self.total_page)
-        # print(self.blog_content)
-        # print(self.blog_likes)
-        # print(self.blog_retweets)
-        # print(self.blog_comments)
         for index in range(0,len(self.blog_content)):
             if self.ori_in_all[index] == False:
                 print(self.retweet_info[index])
@@ -379,17 +380,73 @@ class weibo:
             print('')
         print('*' *20 + ' 爬取结束 ' + '*' *20)
 
+
+
+    def save_as_csv(self):
+        if self.filter == 0:
+            csv_headers = [
+                "微博内容", # 转发理由
+                "转发来源",
+                "转发内容",
+                "图片信息",
+                "点赞数",
+                "转发数",
+                "评论数",
+                "发布时间",
+                "微博来源",
+            ]
+            csv_datas = zip(
+                self.blog_content_total,
+                self.retweet_info,
+                self.original_blog_content,
+                self.pics_info,
+                self.blog_likes,
+                self.blog_retweets,
+                self.blog_comments,
+                self.blog_time,
+                self.blog_device
+            )
+        else:
+            csv_headers = [
+                "微博内容", 
+                "图片信息",
+                "点赞数",
+                "转发数",
+                "评论数",
+                "发布时间",
+                "微博来源",
+            ]
+            csv_datas = zip(
+                self.blog_content_total,
+                self.pics_info,
+                self.blog_likes,
+                self.blog_retweets,
+                self.blog_comments,
+                self.blog_time,
+                self.blog_device
+            )
+        with open('data.csv','w') as csvfile:
+            writer = csv.writer(csvfile)
+            writer.writerow(csv_headers)
+            for i in csv_datas:
+                writer.writerow(i)
+
+
     def main(self):
         # 获得个人信息
         self.get_userinfo()
         self.get_userinfo2()
         self.get_total_page_num()
-        self.enable_progressbar(1)
+        self.enable_progressbar(10)
+        # self.get_one_page(4)
+        for index in range(0,len(self.blog_content)):
+            self.blog_content_total.append(''.join(self.blog_content[index])) 
+        self.save_as_csv()
 
 
 if __name__ == "__main__":
     cookies = 'SCF=AmMdYdAD8xDP84Xc7sEtL9WXFMVx_fALJyadgeh6G41PUqyXV4VQ_9g8MWqBiH82U_5rDZFKsxg0w-CrGae8IXg.; SUBP=0033WrSXqPxfM725Ws9jqgMF55529P9D9WFr0NVib_A0gaGkWL.D5ObN5JpX5K-hUgL.FozceK2R1K2cSKe2dJLoI0qLxKqLBKBLBo5LxK-LB-BL1K5LxKqLBo2L1h2LxKqL1hnL1K2LxKML1hnLBo2LxK-L1KqL1-Bt; _T_WM=52050499844; SL_GWPT_Show_Hide_tmp=1; SL_wptGlobTipTmp=1; MLOGIN=0; SUB=_2A25x-7enDeRhGeRI6lMZ-S_Kzj-IHXVTB9nvrDV6PUJbkdBeLVrMkW1NUtpT2XBkCAb9xERrHGGHTjLUkQZBtos0; SUHB=08J6kbAgs1djdm; SSOLoginState=1560266743'
-    weibo = weibo('2611891653',cookies,0,1)
+    weibo = weibo('2611891653',cookies,0,0)
     weibo.main()
 
 
