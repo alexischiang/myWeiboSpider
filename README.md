@@ -1,9 +1,6 @@
 # myWeiboSpider
 
 <p align="left">
-    <a href="">
-        <img src="https://img.shields.io/badge/状态-持续更新中-brightgreen.svg">
-        </a>
     <a href="https://github.com/python/cpython">
         <img src="https://img.shields.io/badge/Python-3.7-blue.svg">
         </a>
@@ -65,7 +62,8 @@
 ```bash
 iconv -f UTF8 -t GB18030 源文件.csv > 新文件.csv
 ```
-
+#### 2019/6/21 14:25
+*暂时停止更新* 🤣🤣
 
 
 
